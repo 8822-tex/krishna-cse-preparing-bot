@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Krishna's CSE Preparing BOT</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div class="app">
+
+        <!-- Header -->
+        <header class="header">
+            <div>
+                <h1>🤖 Krishna's CSE Preparing BOT</h1>
+                <p>Your personal B.Tech CSE study companion</p>
+            </div>
+        </header>
+
+        <!-- Chat Area -->
+        <main id="chatBox" class="chat-box">
+
+            <div class="message bot-message">
+                <div class="avatar">🤖</div>
+
+                <div class="message-content">
+                    <strong>Krishna's BOT</strong>
+
+                    <p>
+                        Namaste Krishna! 👋
+                    </p>
+
+                    <p>
+                        I'm ready to help you with your B.Tech CSE preparation.
+                        Ask me about DSA, DBMS, Operating Systems, Computer Networks,
+                        Programming, or any other CSE topic.
+                    </p>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Input Area -->
+        <footer class="input-area">
+
+            <input
+                type="text"
+                id="userInput"
+                placeholder="Ask your CSE question..."
+                autocomplete="off"
+            >
+
+            <button id="sendButton">
+                Send 🚀
+            </button>
+
+        </footer>
+
+    </div>
+
+    <script src="script.js"></script>
+
+</body>
+</html>
