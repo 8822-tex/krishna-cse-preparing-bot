@@ -1,5 +1,4 @@
 export default async function handler(req, res) {
-  // Only allow POST requests
   if (req.method !== "POST") {
     return res.status(405).json({
       error: "Method not allowed"
@@ -7,59 +6,52 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { message } = req.body || {};
+    const { message, image } = req.body || {};
 
-    if (!message || !message.trim()) {
+    if (!message && !image) {
       return res.status(400).json({
-        error: "Please enter a message."
+        error: "Message or image is required."
       });
     }
 
-    // OpenAI API key is stored safely in Vercel Environment Variables
-    if (!process.env.OPENAI_API_KEY) {
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
       return res.status(500).json({
-        error: "OPENAI_API_KEY is not configured on the server."
+        error: "GEMINI_API_KEY is not configured."
       });
     }
 
-    const response = await fetch(
-      "https://api.openai.com/v1/responses",
-      {
-        method: "POST",
+    const parts = [];
 
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
-        },
-
-        body: JSON.stringify({
-          model: "gpt-5.6-luna",
-
-          instructions: `
+    parts.push({
+      text: `
 You are Krishna's CSE Guiding BOT.
 
-Your name is Krishna's CSE Guiding BOT.
+You are Krishna's personal Computer Science and Engineering tutor.
 
-Your main purpose is to help Krishna learn Computer Science and Engineering.
+Your job is to help Krishna understand CSE deeply in a simple and friendly way.
 
-You are a friendly, patient and intelligent CSE tutor.
+You can teach:
 
-Teach these areas:
-- Programming
-- C and C++
+- C Programming
+- C++
 - Java
 - Python
 - JavaScript
-- Data Structures and Algorithms
-- Object Oriented Programming
-- Database Management Systems
+- HTML
+- CSS
+- Web Development
+- Data Structures
+- Algorithms
+- OOP
+- DBMS
 - SQL
 - Operating Systems
 - Computer Networks
 - Computer Architecture
 - Software Engineering
-- Web Development
-- Artificial Intelligence
+- AI
 - Machine Learning
 - Cybersecurity
 - Cloud Computing
@@ -71,28 +63,62 @@ Teach these areas:
 
 Teaching rules:
 
-1. Explain difficult concepts in simple language.
-2. Give step-by-step explanations.
-3. Use examples whenever useful.
-4. When giving code, explain what the code does.
-5. If Krishna gives code, help debug and improve it.
-6. If Krishna asks an exam question, give an exam-friendly answer.
-7. If a concept is confusing, explain it using a real-world analogy.
-8. Do not unnecessarily make answers complicated.
-9. Encourage Krishna to understand concepts instead of blindly copying answers.
-10. If you are uncertain about a fact, clearly say that you are uncertain rather than inventing information.
-11. You can communicate in English, Nepali, or a mixture of both depending on Krishna's language.
-12. Never reveal or ask for the OpenAI API key.
-13. Always behave like a helpful CSE study mentor.
+1. Explain concepts step by step.
+2. Use simple language.
+3. Give real-world examples.
+4. For programming questions, explain the logic before the code.
+5. Explain important parts of code.
+6. Give time and space complexity when relevant.
+7. Help find and fix programming errors.
+8. If an image is provided, carefully analyze it.
+9. If the image contains code, explain or debug the code.
+10. If the image contains a CSE question, solve and explain it.
+11. If the image contains a diagram, explain the diagram.
+12. If Krishna asks in Nepali, answer in Nepali or Nepali-English mix.
+13. If Krishna asks in English, answer in English.
+14. Do not pretend to know something if you are uncertain.
+15. Act like a patient personal CSE tutor.
+16. Encourage understanding rather than blind copying.
 
-For programming questions:
-- Explain the approach first.
-- Then provide code when appropriate.
-- Explain important parts of the code.
-- Mention time and space complexity for algorithms when useful.
-`,
+User question:
+${message || "Please analyze the uploaded image."}
+      `
+    });
 
-          input: message.trim()
+    // Add image if provided
+    if (image) {
+
+      const match = image.match(/^data:(image\/[^;]+);base64,(.+)$/);
+
+      if (match) {
+
+        parts.push({
+          inline_data: {
+            mime_type: match[1],
+            data: match[2]
+          }
+        });
+
+      }
+    }
+
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey
+        },
+
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: parts
+            }
+          ]
         })
       }
     );
@@ -100,40 +126,34 @@ For programming questions:
     const data = await response.json();
 
     if (!response.ok) {
+      console.error("Gemini API error:", data);
+
       return res.status(response.status).json({
         error:
           data?.error?.message ||
-          "OpenAI request failed."
+          "Gemini API request failed."
       });
     }
 
-    // Extract text from the Responses API output
-    let reply = "";
+    const answer =
+      data?.candidates?.[0]?.content?.parts
+        ?.map(part => part.text || "")
+        .join("")
+        .trim();
 
-    if (Array.isArray(data.output)) {
-      for (const item of data.output) {
-        if (Array.isArray(item.content)) {
-          for (const content of item.content) {
-            if (content.type === "output_text" && content.text) {
-              reply += content.text;
-            }
-          }
-        }
-      }
-    }
-
-    if (!reply) {
+    if (!answer) {
       return res.status(500).json({
-        error: "The AI returned an empty response."
+        error: "Gemini returned an empty response."
       });
     }
 
     return res.status(200).json({
-      reply: reply
+      answer: answer
     });
 
   } catch (error) {
-    console.error("Chat API error:", error);
+
+    console.error("Server error:", error);
 
     return res.status(500).json({
       error: "Something went wrong on the server."
